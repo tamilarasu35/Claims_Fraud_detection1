@@ -1,6 +1,6 @@
 """
 Healthcare Provider Fraud Intelligence System - Premium Streamlit Portal.
-Features Centered Minimalist Login Screen & Multi-Format Fraud Intelligence Hub.
+Featuring High-Contrast Visual Aesthetics & Pure Centered Login Screen.
 """
 
 import streamlit as st
@@ -27,63 +27,77 @@ st.set_page_config(
     initial_sidebar_state="collapsed" if "authenticated" not in st.session_state or not st.session_state["authenticated"] else "expanded"
 )
 
-# 2. Styling (Dark Mode & Centered Card Aesthetics)
+# 2. High-Contrast CSS Override for 100% Visibility
 st.markdown("""
 <style>
-    /* Dark Slate Body Background */
+    /* Global App Background */
     .stApp {
-        background-color: #090d16;
-        color: #f8fafc;
+        background-color: #0b0f19 !important;
+        color: #ffffff !important;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
     
+    /* Ensure ALL Headings, Paragraphs, Labels, and Text are Bright White / Cyan */
+    h1, h2, h3, h4, h5, h6, label, p, span, div, caption, .stMarkdown {
+        color: #ffffff !important;
+    }
+    
+    /* Input Fields, Selectboxes, Textareas High Contrast */
+    input, select, textarea, div[data-baseweb="select"] {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+        border: 1px solid #475569 !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Fix Streamlit Selectbox Option Dropdowns */
+    ul[data-baseweb="menu"] {
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+    }
+    li[data-baseweb="option"] {
+        color: #ffffff !important;
+    }
+
     /* Centered Login Card Styling */
     .login-card {
-        background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 20px;
-        padding: 40px 36px;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        background: #1e293b;
+        border: 2px solid #3b82f6;
+        border-radius: 16px;
+        padding: 36px 32px;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
         text-align: center;
-        margin-top: 50px;
+        margin-top: 30px;
     }
     .login-card h1 {
         font-size: 2.2rem;
         font-weight: 800;
-        background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #38bdf8 !important;
         margin-bottom: 8px;
     }
     .login-card p {
-        color: #94a3b8;
-        font-size: 1.0rem;
-        margin-bottom: 28px;
+        color: #cbd5e1 !important;
+        font-size: 1.05rem;
+        margin-bottom: 24px;
     }
 
-    /* Top Navigation Header for Logged-In Users */
-    .top-header {
-        background: linear-gradient(90deg, #0f172a 0%, #1e1b4b 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        padding: 16px 24px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
+    /* Metric Cards High Contrast */
+    div[data-testid="stMetricValue"] {
+        color: #38bdf8 !important;
+        font-size: 2.0rem !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #cbd5e1 !important;
+        font-size: 1.0rem !important;
+        font-weight: 600 !important;
     }
     
     /* Role Badges */
-    .badge-user { background: #3b82f6; color: white; padding: 4px 14px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }
-    .badge-investigator { background: #f59e0b; color: white; padding: 4px 14px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }
-    .badge-manager { background: #10b981; color: white; padding: 4px 14px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }
-    .badge-admin { background: #ef4444; color: white; padding: 4px 14px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }
-    
-    /* Risk Pill Badges */
-    .risk-critical { background-color: #ef4444; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 700; }
-    .risk-high { background-color: #f97316; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 700; }
-    .risk-medium { background-color: #eab308; color: black; padding: 4px 10px; border-radius: 6px; font-weight: 700; }
-    .risk-low { background-color: #22c55e; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 700; }
+    .badge-user { background: #3b82f6; color: #ffffff !important; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+    .badge-investigator { background: #f59e0b; color: #ffffff !important; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+    .badge-manager { background: #10b981; color: #ffffff !important; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
+    .badge-admin { background: #ef4444; color: #ffffff !important; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -195,14 +209,14 @@ else:
     # Strict RBAC Navigation Locking
     if role_name == "USER":
         st.sidebar.markdown("**Active Role Workspace:**")
-        st.sidebar.info("📥 Multi-Format Ingestion & Fraud Assessment")
+        st.sidebar.info("📥 File Fraud Detection Hub")
         st.caption("🔒 Role Limited: Analyst Mode")
         render_user_dashboard(user)
 
     elif role_name == "INVESTIGATOR":
         selected_page = st.sidebar.radio(
             "Select Workspace Module:",
-            ["🔍 Provider Investigation Workspace", "📥 Multi-Format Ingestion & Assessment"]
+            ["🔍 Provider Investigation Workspace", "📥 File Fraud Detection Hub"]
         )
         st.caption("🔒 Role Limited: Investigator Mode")
         if selected_page == "🔍 Provider Investigation Workspace":
@@ -213,7 +227,7 @@ else:
     elif role_name == "MANAGER":
         selected_page = st.sidebar.radio(
             "Select Workspace Module:",
-            ["📊 Executive Manager Command Center", "📥 Multi-Format Ingestion & Assessment"]
+            ["📊 Executive Manager Command Center", "📥 File Fraud Detection Hub"]
         )
         st.caption("🔒 Role Limited: Executive Manager Mode")
         if selected_page == "📊 Executive Manager Command Center":
@@ -225,7 +239,7 @@ else:
         selected_page = st.sidebar.radio(
             "Select Workspace Module:",
             [
-                "📥 Multi-Format Ingestion & Assessment",
+                "📥 File Fraud Detection Hub",
                 "🔍 Provider Investigation Workspace",
                 "📊 Executive Manager Command Center",
                 "⚙️ System Admin & Security Governance"
@@ -233,7 +247,7 @@ else:
         )
         st.caption("🔓 Unlimited Access: Administrator Mode")
         
-        if selected_page == "📥 Multi-Format Ingestion & Assessment":
+        if selected_page == "📥 File Fraud Detection Hub":
             render_user_dashboard(user)
         elif selected_page == "🔍 Provider Investigation Workspace":
             render_investigator_dashboard(user)

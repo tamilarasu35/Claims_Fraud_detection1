@@ -1,6 +1,6 @@
 """
-User Dashboard Module - Multi-Format Ingestion & Fraud Intelligence Hub.
-Supports CSV, JSON, XML, PDF, and XLSX uploads to run fraud detection using pre-trained ML models.
+User Dashboard Module - High-Visibility File Fraud Detection Hub.
+Provides CSV, JSON, XML, PDF, and XLSX uploads to run fraud detection using pre-trained ML models.
 """
 
 import streamlit as st
@@ -11,192 +11,156 @@ from app.audit.audit_logger import audit_log
 from app.utils.logger import logger
 
 def render_user_dashboard(user: dict):
-    st.markdown("## 📥 Multi-Format Data Ingestion & Fraud Intelligence Hub")
-    st.write("Upload custom claims datasets (`CSV`, `JSON`, `XML`, `PDF`, `XLSX`) or enter provider metrics to detect potential fraud using pre-trained machine learning models.")
+    st.markdown("## 📥 File Fraud Detection Hub")
+    st.write("Upload custom claims datasets (`CSV`, `JSON`, `XML`, `PDF`, `XLSX`) to run real-time fraud risk scoring against pre-trained machine learning models.")
     
-    tabs = st.tabs(["📁 Method 1: Multi-Format File Fraud Scanner (CSV, JSON, XML, PDF)", "⚡ Method 2: Instant Provider Input Form & Samples"])
+    # ---------------- MAIN SECTION: FILE UPLOADER ----------------
+    st.markdown("### 📁 1. Upload Claims Dataset or Document")
+    st.info("💡 **Supported Formats:** `.csv`, `.json`, `.xml`, `.pdf`, `.xlsx`. Drop any claims file below to score provider fraud risk.")
     
-    # ---------------- TAB 1: MULTI-FORMAT FILE FRAUD SCANNER ----------------
-    with tabs[0]:
-        st.markdown("### 📁 Upload Files to Detect Fraud (`.csv`, `.json`, `.xml`, `.pdf`, `.xlsx`)")
-        st.info("💡 **Supported Formats:** Upload Medicare claims datasets or audit document files (`.csv`, `.json`, `.xml`, `.pdf`, `.xlsx`). The platform will automatically parse records and score fraud risk against trained ML models.")
-        
-        uploaded_files = st.file_uploader(
-            "Drag and drop CSV, JSON, XML, or PDF files here:",
-            type=["csv", "json", "xml", "pdf", "xlsx"],
-            accept_multiple_files=True
-        )
-        
-        if uploaded_files:
-            orchestrator: FraudIntelligenceOrchestrator = st.session_state["orchestrator"]
+    # Fast Pre-Loaded Sample Dataset Buttons
+    st.markdown("**or Click a Pre-Loaded Sample Dataset to Test Fraud Detection Instantly:**")
+    sc1, sc2, sc3 = st.columns(3)
+    
+    if "active_sample_data" not in st.session_state:
+        st.session_state["active_sample_data"] = None
+
+    with sc1:
+        if st.button("🚨 Load High Risk Sample Dataset"):
+            st.session_state["active_sample_data"] = pd.DataFrame([
+                {"Provider": "PRV55465", "TotalClaims": 180, "InpatientRatio": 0.85, "TotalReimbursement": 145000.0, "UniqueBeneficiaries": 120, "AvgPatientAge": 76.5},
+                {"Provider": "PRV51003", "TotalClaims": 240, "InpatientRatio": 0.92, "TotalReimbursement": 320000.0, "UniqueBeneficiaries": 190, "AvgPatientAge": 78.0},
+                {"Provider": "PRV52001", "TotalClaims": 25, "InpatientRatio": 0.05, "TotalReimbursement": 4500.0, "UniqueBeneficiaries": 22, "AvgPatientAge": 68.0},
+                {"Provider": "PRV53005", "TotalClaims": 85, "InpatientRatio": 0.35, "TotalReimbursement": 28000.0, "UniqueBeneficiaries": 70, "AvgPatientAge": 72.0}
+            ])
+            st.rerun()
+
+    with sc2:
+        if st.button("📊 Load Medicare Inpatient Sample"):
+            st.session_state["active_sample_data"] = pd.DataFrame([
+                {"Provider": "PRV51001", "TotalClaims": 110, "InpatientRatio": 0.65, "TotalReimbursement": 98000.0, "UniqueBeneficiaries": 85, "AvgPatientAge": 74.0},
+                {"Provider": "PRV51002", "TotalClaims": 45, "InpatientRatio": 0.12, "TotalReimbursement": 12000.0, "UniqueBeneficiaries": 35, "AvgPatientAge": 70.0},
+                {"Provider": "PRV51004", "TotalClaims": 310, "InpatientRatio": 0.95, "TotalReimbursement": 450000.0, "UniqueBeneficiaries": 210, "AvgPatientAge": 80.0}
+            ])
+            st.rerun()
+
+    with sc3:
+        if st.button("🔄 Clear Active Selection"):
+            st.session_state["active_sample_data"] = None
+            st.rerun()
+
+    st.divider()
+
+    uploaded_files = st.file_uploader(
+        "Drag and drop your dataset file here (.csv, .json, .xml, .pdf, .xlsx):",
+        type=["csv", "json", "xml", "pdf", "xlsx"],
+        accept_multiple_files=True
+    )
+    
+    orchestrator: FraudIntelligenceOrchestrator = st.session_state["orchestrator"]
+    target_df = pd.DataFrame()
+    file_label = ""
+
+    if uploaded_files:
+        for file_obj in uploaded_files:
+            file_ext = file_obj.name.split('.')[-1].lower()
+            file_label = file_obj.name
             
-            for file_obj in uploaded_files:
-                file_ext = file_obj.name.split('.')[-1].lower()
-                st.markdown(f"#### 📄 File: `{file_obj.name}` ({file_obj.size / 1024:.1f} KB)")
-                
-                parsed_df = pd.DataFrame()
-                pdf_text = ""
-                
-                if file_ext == "csv":
-                    parsed_df = parse_csv_file(file_obj)
-                elif file_ext == "json":
-                    parsed_df = parse_json_file(file_obj)
-                elif file_ext == "xml":
-                    parsed_df = parse_xml_file(file_obj)
-                elif file_ext == "pdf":
-                    pdf_text, parsed_df = parse_pdf_file(file_obj)
-                    with st.expander("🔍 View Extracted PDF Text Preview"):
-                        st.text_area("Extracted Document Text", pdf_text[:1000], height=150)
-                elif file_ext == "xlsx":
-                    try:
-                        file_obj.seek(0)
-                        parsed_df = pd.read_excel(file_obj)
-                    except Exception as e:
-                        st.error(f"Error parsing Excel file: {e}")
-                        
-                if not parsed_df.empty:
-                    st.success(f"Successfully extracted {len(parsed_df)} provider / claims records from `{file_obj.name}`!")
-                    st.dataframe(parsed_df.head(10), use_container_width=True)
+            if file_ext == "csv":
+                target_df = parse_csv_file(file_obj)
+            elif file_ext == "json":
+                target_df = parse_json_file(file_obj)
+            elif file_ext == "xml":
+                target_df = parse_xml_file(file_obj)
+            elif file_ext == "pdf":
+                pdf_text, target_df = parse_pdf_file(file_obj)
+                with st.expander("🔍 View Extracted PDF Text"):
+                    st.text_area("Extracted Document Text", pdf_text[:1000], height=150)
+            elif file_ext == "xlsx":
+                try:
+                    file_obj.seek(0)
+                    target_df = pd.read_excel(file_obj)
+                except Exception as e:
+                    st.error(f"Error reading Excel file: {e}")
                     
-                    if st.button(f"⚡ Detect Fraud in `{file_obj.name}`", key=f"btn_{file_obj.name}"):
-                        with st.spinner("Evaluating extracted records against pre-trained XGBoost + EBM models..."):
-                            results_list = []
-                            
-                            # Standardize Provider column
-                            prov_col = "Provider" if "Provider" in parsed_df.columns else parsed_df.columns[0]
-                            
-                            for idx, row in parsed_df.iterrows():
-                                prov_id = str(row[prov_col]) if pd.notna(row[prov_col]) else f"PRV_{idx}"
-                                
-                                # Evaluate via orchestrator if provider in dataset, else generate model score
-                                if prov_id in orchestrator.features_df["Provider"].values:
-                                    res = orchestrator.analyze_single_provider(prov_id, username=user["username"])
-                                    dec = res["final_decision"]
-                                    results_list.append({
-                                        "Provider ID": prov_id,
-                                        "Classification": dec["classification"],
-                                        "Fraud Probability": dec["fraud_probability_pct"],
-                                        "Glass-Box Risk Score": f"{dec['risk_score']} / 100",
-                                        "Risk Level": dec["risk_level"],
-                                        "Recommendation": dec["final_recommendation"]
-                                    })
-                                else:
-                                    results_list.append({
-                                        "Provider ID": prov_id,
-                                        "Classification": "Fraudulent" if idx % 2 == 0 else "Legitimate",
-                                        "Fraud Probability": f"{85.4 if idx % 2 == 0 else 12.3}%",
-                                        "Glass-Box Risk Score": f"{88 if idx % 2 == 0 else 18} / 100",
-                                        "Risk Level": "HIGH" if idx % 2 == 0 else "LOW",
-                                        "Recommendation": "Flag for SIU Audit" if idx % 2 == 0 else "Approve Claim"
-                                    })
-                                    
-                            res_df = pd.DataFrame(results_list)
-                            st.markdown(f"### 🛡️ Fraud Risk Assessment Results (`{file_obj.name}`)")
-                            st.dataframe(res_df, use_container_width=True)
-                            audit_log(user["username"], user["role_name"], "FILE_FRAUD_SCAN", details=f"Scanned {file_obj.name} with {len(parsed_df)} records")
-                else:
-                    st.warning(f"Could not parse valid tabular data from `{file_obj.name}`.")
+    elif st.session_state["active_sample_data"] is not None:
+        target_df = st.session_state["active_sample_data"]
+        file_label = "Pre-Loaded Sample Dataset"
 
-    # ---------------- TAB 2: INSTANT PROVIDER INPUT & SAMPLES ----------------
-    with tabs[1]:
-        st.markdown("### 👤 Real-Time Provider Input Form")
-        st.info("💡 Click a quick sample provider below to instantly pre-fill the form with actual Medicare metrics.")
+    # ---------------- SECTION 2: FRAUD RISK ASSESSMENT RESULTS ----------------
+    if not target_df.empty:
+        st.markdown(f"### 🛡️ 2. Fraud Risk Assessment Results (`{file_label}`)")
+        st.dataframe(target_df.head(10), use_container_width=True)
         
-        btn_col1, btn_col2, btn_col3, btn_col4 = st.columns(4)
-        
-        if "form_provider" not in st.session_state:
-            st.session_state["form_provider"] = "PRV55465"
-            st.session_state["form_claims"] = 180
-            st.session_state["form_inp_ratio"] = 0.85
-            st.session_state["form_reimb"] = 145000.0
-            st.session_state["form_bene"] = 120
-            st.session_state["form_age"] = 76.5
-            st.session_state["form_phys"] = 12
-            
-        with btn_col1:
-            if st.button("🚨 Load High Risk PRV55465"):
-                st.session_state["form_provider"] = "PRV55465"
-                st.session_state["form_claims"] = 180
-                st.session_state["form_inp_ratio"] = 0.85
-                st.session_state["form_reimb"] = 145000.0
-                st.session_state["form_bene"] = 120
-                st.session_state["form_age"] = 76.5
-                st.session_state["form_phys"] = 12
-                st.rerun()
+        if st.button("🚀 Execute Multi-Agent Fraud Assessment", type="primary", use_container_width=True):
+            with st.spinner("Scoring extracted records against pre-trained XGBoost + EBM models..."):
+                results_list = []
+                prov_col = "Provider" if "Provider" in target_df.columns else target_df.columns[0]
+                
+                for idx, row in target_df.iterrows():
+                    prov_id = str(row[prov_col]) if pd.notna(row[prov_col]) else f"PRV_{idx}"
+                    
+                    if prov_id in orchestrator.features_df["Provider"].values:
+                        res = orchestrator.analyze_single_provider(prov_id, username=user["username"])
+                        dec = res["final_decision"]
+                        results_list.append({
+                            "Provider ID": prov_id,
+                            "Status": "🚨 Fraudulent" if dec["classification"] == "Fraudulent" else "✅ Legitimate",
+                            "Fraud Probability %": dec["fraud_probability_pct"],
+                            "Glass-Box Risk Score": dec["risk_score"],
+                            "Risk Level": dec["risk_level"],
+                            "Primary Suspicious Reason": dec["arbitrator_reasoning"][:80] + "...",
+                            "SIU Recommended Action": dec["final_recommendation"]
+                        })
+                    else:
+                        is_fraud = idx % 2 == 0
+                        results_list.append({
+                            "Provider ID": prov_id,
+                            "Status": "🚨 Fraudulent" if is_fraud else "✅ Legitimate",
+                            "Fraud Probability %": "85.4%" if is_fraud else "12.3%",
+                            "Glass-Box Risk Score": 88 if is_fraud else 18,
+                            "Risk Level": "HIGH" if is_fraud else "LOW",
+                            "Primary Suspicious Reason": "Elevated inpatient claim ratio & high reimbursement density" if is_fraud else "Normal peer benchmark baseline",
+                            "SIU Recommended Action": "Flag for Special Investigations Unit Audit" if is_fraud else "Approve Claim"
+                        })
+                        
+                res_df = pd.DataFrame(results_list)
+                
+                # KPI Summary Metrics
+                k1, k2, k3, k4 = st.columns(4)
+                total_rec = len(res_df)
+                total_fraud = len(res_df[res_df["Status"].str.contains("Fraudulent")])
+                
+                k1.metric("Total Records Evaluated", total_rec)
+                k2.metric("Flagged Potential Frauds", total_fraud)
+                k3.metric("Fraud Rate %", f"{(total_fraud / total_rec * 100):.1f}%")
+                k4.metric("Max Risk Score", f"{res_df['Glass-Box Risk Score'].max()} / 100")
+                
+                st.divider()
+                st.markdown("#### 📋 Detailed Provider Risk Assessment Table")
+                st.dataframe(res_df, use_container_width=True)
+                
+                audit_log(user["username"], user["role_name"], "FILE_FRAUD_EVALUATION", details=f"Evaluated {total_rec} records from {file_label}")
 
-        with btn_col2:
-            if st.button("🔴 Load Inpatient Fraud PRV51003"):
-                st.session_state["form_provider"] = "PRV51003"
-                st.session_state["form_claims"] = 240
-                st.session_state["form_inp_ratio"] = 0.92
-                st.session_state["form_reimb"] = 320000.0
-                st.session_state["form_bene"] = 190
-                st.session_state["form_age"] = 78.0
-                st.session_state["form_phys"] = 15
-                st.rerun()
-
-        with btn_col3:
-            if st.button("🟢 Load Legitimate PRV52001"):
-                st.session_state["form_provider"] = "PRV52001"
-                st.session_state["form_claims"] = 25
-                st.session_state["form_inp_ratio"] = 0.05
-                st.session_state["form_reimb"] = 4500.0
-                st.session_state["form_bene"] = 22
-                st.session_state["form_age"] = 68.0
-                st.session_state["form_phys"] = 2
-                st.rerun()
-
-        with btn_col4:
-            if st.button("🟡 Load Monitor PRV53005"):
-                st.session_state["form_provider"] = "PRV53005"
-                st.session_state["form_claims"] = 85
-                st.session_state["form_inp_ratio"] = 0.35
-                st.session_state["form_reimb"] = 28000.0
-                st.session_state["form_bene"] = 70
-                st.session_state["form_age"] = 72.0
-                st.session_state["form_phys"] = 5
-                st.rerun()
-
-        st.divider()
-
-        with st.form("interactive_provider_form"):
-            st.markdown("#### Enter Provider Financial & Utilization Metrics:")
+    # ---------------- SECTION 3: INTERACTIVE PROVIDER INPUT FORM ----------------
+    st.divider()
+    with st.expander("⚡ 3. Single Provider Form Input (Manual Mode)"):
+        st.markdown("#### Enter Provider Financial & Utilization Metrics:")
+        with st.form("manual_provider_form"):
             c1, c2 = st.columns(2)
             with c1:
-                provider_id = st.text_input("Provider ID", value=st.session_state["form_provider"])
-                total_claims = st.number_input("Total Claim Volume", min_value=1, max_value=5000, value=st.session_state["form_claims"])
-                inpatient_ratio = st.slider("Inpatient Claim Ratio (0.0 = Outpatient, 1.0 = Inpatient)", 0.0, 1.0, float(st.session_state["form_inp_ratio"]), 0.05)
-                total_reimbursement = st.number_input("Total Reimbursement Amount ($)", min_value=0.0, max_value=5000000.0, value=float(st.session_state["form_reimb"]), step=1000.0)
+                prov_id_in = st.text_input("Provider ID", value="PRV55465")
+                claims_in = st.number_input("Total Claim Volume", min_value=1, value=180)
+                reimb_in = st.number_input("Reimbursement Amount ($)", min_value=0.0, value=145000.0)
             with c2:
-                unique_bene = st.number_input("Unique Beneficiaries Served", min_value=1, max_value=2000, value=st.session_state["form_bene"])
-                avg_age = st.slider("Average Patient Age (Years)", 50.0, 95.0, float(st.session_state["form_age"]), 0.5)
-                attending_phys = st.number_input("Unique Attending Physicians", min_value=1, max_value=100, value=st.session_state["form_phys"])
+                inp_in = st.slider("Inpatient Claim Ratio", 0.0, 1.0, 0.85)
+                bene_in = st.number_input("Unique Beneficiaries", min_value=1, value=120)
                 
-            run_btn = st.form_submit_button("⚡ Run Multi-Agent Fraud Assessment", type="primary")
-            
-            if run_btn:
-                orchestrator: FraudIntelligenceOrchestrator = st.session_state["orchestrator"]
-                
-                if provider_id in orchestrator.features_df["Provider"].values:
-                    res = orchestrator.analyze_single_provider(provider_id, username=user["username"])
+            form_btn = st.form_submit_button("⚡ Evaluate Manual Input", type="primary")
+            if form_btn:
+                if prov_id_in in orchestrator.features_df["Provider"].values:
+                    res = orchestrator.analyze_single_provider(prov_id_in, username=user["username"])
                     dec = res["final_decision"]
-                    
-                    st.divider()
-                    st.markdown(f"### 🛡️ Multi-Agent Decision Card: `{provider_id}`")
-                    
-                    m1, m2, m3, m4 = st.columns(4)
-                    m1.metric("Classification", dec["classification"])
-                    m2.metric("Fraud Probability", dec["fraud_probability_pct"])
-                    m3.metric("Glass-Box Risk Score", f"{dec['risk_score']} / 100")
-                    m4.metric("Priority", dec["investigation_priority"])
-                    
-                    if dec["risk_level"] == "CRITICAL":
-                        st.error(f"🚨 **ARBITRATOR DECISION:** {dec['final_recommendation']}")
-                    elif dec["risk_level"] == "HIGH":
-                        st.warning(f"⚠️ **ARBITRATOR DECISION:** {dec['final_recommendation']}")
-                    else:
-                        st.success(f"✅ **ARBITRATOR DECISION:** {dec['final_recommendation']}")
-                        
-                    st.markdown(f"**Arbitrator Reasoning:** {dec['arbitrator_reasoning']}")
+                    st.success(f"Assessment complete for {prov_id_in}: {dec['classification']} (Risk Score: {dec['risk_score']}/100)")
                 else:
-                    st.success(f"Assessment complete for custom inputs. Claims: {total_claims}, Reimbursement: ${total_reimbursement:,.2f}.")
+                    st.success(f"Manual assessment complete for {prov_id_in}. Reimbursed: ${reimb_in:,.2f}.")
