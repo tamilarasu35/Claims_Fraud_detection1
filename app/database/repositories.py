@@ -3,7 +3,9 @@ Database Repository Layer for CRUD operations.
 """
 
 import json
+import pandas as pd
 from typing import Optional, List, Dict, Any
+
 from app.database.database import get_db_connection
 from app.database.models import User, ProviderResult, AuditLogEntry
 from app.utils.logger import logger
@@ -63,6 +65,30 @@ class AuditRepository:
 
 class ResultsRepository:
     @staticmethod
+    def upsert_providers_from_features(features_df: pd.DataFrame):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            for _, row in features_df.iterrows():
+                cursor.execute("""
+                INSERT OR REPLACE INTO providers (
+                    provider_id, total_claims, total_reimbursement,
+                    beneficiary_count, inpatient_claims, outpatient_claims
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    str(row['Provider']),
+                    int(row.get('TotalClaims', 0)),
+                    float(row.get('TotalReimbursement', 0.0)),
+                    int(row.get('UniqueBeneficiaries', 0)),
+                    int(row.get('InpatientClaims', 0)),
+                    int(row.get('OutpatientClaims', 0))
+                ))
+            conn.commit()
+        except Exception as e:
+            logger.error(f"Error upserting providers into SQLite DB: {e}")
+            conn.rollback()
+
+    @staticmethod
     def save_provider_result(result: ProviderResult) -> bool:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -86,6 +112,7 @@ class ResultsRepository:
             logger.error(f"Error saving provider result for {result.provider_id}: {e}")
             conn.rollback()
             return False
+
 
     @staticmethod
     def get_results_by_run(run_uuid: str) -> List[Dict[str, Any]]:

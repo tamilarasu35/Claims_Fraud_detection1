@@ -49,7 +49,9 @@ class FraudIntelligenceOrchestrator:
         # Step 2: Feature Engineering
         self.log_step("Feature Engineering", "RUNNING", "Aggregating claims to provider-level behavioral features & peer z-scores...")
         self.features_df = FeatureEngineer.generate_provider_features(self.perception_agent.cleaned_data)
+        ResultsRepository.upsert_providers_from_features(self.features_df)
         self.log_step("Feature Engineering", "COMPLETED", f"Generated {self.features_df.shape[1]-2} behavioral features.")
+
         
         # Step 3: Fraud Analysis Agent Training
         self.log_step("Fraud Analysis Agent", "RUNNING", "Training XGBoost classifier and EBM glass-box risk explainer...")
