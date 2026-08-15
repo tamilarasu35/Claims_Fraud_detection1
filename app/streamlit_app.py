@@ -27,6 +27,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+
 # 2. CSS Override: Completely Hide Sidebar Globally & High-Contrast Styling
 st.markdown("""
 <style>
