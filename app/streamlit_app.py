@@ -125,6 +125,11 @@ else:
         
     st.sidebar.divider()
     
+    from app.ui.dashboards.user_dashboard import render_user_dashboard
+    from app.ui.dashboards.investigator_dashboard import render_investigator_dashboard
+    from app.ui.dashboards.manager_dashboard import render_manager_dashboard
+    from app.ui.dashboards.admin_dashboard import render_admin_dashboard
+
     # Available Views based on RBAC
     options = []
     if AuthorizationService.require_permission(user, "upload_dataset"):
@@ -138,5 +143,13 @@ else:
         
     selected_page = st.sidebar.radio("Module Selection", options if options else ["Overview"])
     
-    st.subheader(f"Active Module: {selected_page}")
-    st.write("System foundation initialized cleanly. Phase 1 active.")
+    if selected_page == "📥 Data Ingestion & Perception":
+        render_user_dashboard(user)
+    elif selected_page == "🔍 Provider Investigation Drill-Down":
+        render_investigator_dashboard(user)
+    elif selected_page == "📊 Manager Executive Dashboard":
+        render_manager_dashboard(user)
+    elif selected_page == "⚙️ Admin System Management":
+        render_admin_dashboard(user)
+    else:
+        st.write("Welcome to Healthcare Provider Fraud Intelligence Platform.")
