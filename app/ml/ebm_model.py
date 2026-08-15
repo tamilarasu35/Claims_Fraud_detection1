@@ -34,7 +34,7 @@ class EBMExplainerModel:
             max_interaction_bins=32,
             interactions=0,  # Main additive effects for maximum direct explainability
             random_state=random_state,
-            n_jobs=-1
+            n_jobs=1
         )
         self.model.fit(X, y)
         
