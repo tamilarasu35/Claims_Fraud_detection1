@@ -35,12 +35,19 @@ st.markdown("""
         display: none !important;
     }
     
+    /* Make Streamlit Top Header match dark background */
+    header[data-testid="stHeader"], .stAppHeader, header, div[data-testid="stHeader"] {
+        background-color: #0b0f19 !important;
+        color: #ffffff !important;
+    }
+    
     /* Main Content Width & Background */
     .stApp {
         background-color: #0b0f19 !important;
         color: #ffffff !important;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
+
     
     /* Headings & Text Color High Contrast */
     h1, h2, h3, h4, h5, h6, label, p, span, div, caption, .stMarkdown {
