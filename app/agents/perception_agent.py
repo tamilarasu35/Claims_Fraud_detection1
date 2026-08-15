@@ -119,5 +119,18 @@ class PerceptionAgent:
             ]
         }
         
+        # Free raw data buffer to conserve memory
+        self.raw_data.clear()
+        import gc
+        gc.collect()
+        
         logger.info("PerceptionAgent: Pipeline execution complete.")
         return self.report
+
+    def clear_cache(self):
+        """Free loaded DataFrames from memory."""
+        self.raw_data.clear()
+        self.cleaned_data.clear()
+        import gc
+        gc.collect()
+

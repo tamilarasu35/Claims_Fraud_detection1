@@ -21,6 +21,21 @@ class FraudAnalysisAgent:
         self.feature_names: List[str] = []
         self.is_trained: bool = False
 
+
+    def try_load_pretrained(self, version_tag: str = "v1.0.0") -> bool:
+        """Attempt to auto-load pre-trained XGBoost and EBM models from disk if available."""
+        try:
+            self.xgb_model.load_model(version_tag)
+            self.ebm_model.load_model(version_tag)
+            self.feature_names = self.xgb_model.feature_names
+            self.is_trained = True
+            logger.info(f"FraudAnalysisAgent: Pre-trained production models ({version_tag}) auto-loaded successfully!")
+            return True
+        except Exception as e:
+            logger.info(f"FraudAnalysisAgent: No pre-trained model found for {version_tag} ({e}).")
+            return False
+
+
     def train_pipeline(self, features_df: pd.DataFrame) -> Dict[str, Any]:
         """Train XGBoost and EBM models on extracted provider behavioral features."""
         logger.info("FraudAnalysisAgent: Training ML models (XGBoost + EBM)...")
